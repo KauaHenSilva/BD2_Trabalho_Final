@@ -19,7 +19,7 @@ fake = Faker()
 num_cores = os.cpu_count()  # Número de núcleos da CPU
 num_threads_cpu = num_cores  # Número de threads CPU-bound
 num_threads_io = num_cores * 2  # Número de threads I/O-bound
-qtd_por_thread = 1_00  # Quantidade de dados por thread
+qtd_por_thread = 1_000  # Quantidade de dados por thread
 
 # Criação do pool de conexões
 connection_pool = ThreadedConnectionPool(1, num_threads_io, **db_config)
@@ -52,7 +52,7 @@ def criar_tabela():
         
         -- Índice GIN para o campo 'nome' caso tenha buscas por partes do texto
         CREATE EXTENSION IF NOT EXISTS pg_trgm;
-        CREATE INDEX IF NOT EXISTS idx_tabela_nome ON my_table USING GIN (nome gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_tabela_nome_gin ON my_table USING GIN (nome gin_trgm_ops);
         
         -- Índice GIST para a coluna 'descricao_tsv'.
         CREATE INDEX IF NOT EXISTS idx_descricao_gist ON my_table USING GIST (descricao_tsv);

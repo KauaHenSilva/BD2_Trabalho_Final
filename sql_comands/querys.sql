@@ -1,19 +1,27 @@
 -- Pegar o tamanho da tabela
 SELECT pg_size_pretty(pg_total_relation_size('usuario'));
-
+SET enable_seqscan = off;
 -- Consulta com index basico
 
-EXPLAIN SELECT * FROM Usuario WHERE email = 'sarahesparza@example.com';
+EXPLAIN ANALYZE SELECT * FROM my_table WHERE email = 'sarahesparza@example.com';
 
-EXPLAIN SELECT * FROM Usuario WHERE nome = 'Kim Evans';
+-- Consulta com index avançado hash == OKAY
+EXPLAIN ANALYZE SELECT * FROM my_table WHERE nome = 'João';
 
-EXPLAIN SELECT * FROM Usuario WHERE nome LIKE 'Kim%';
+-- Consulta com index avançado 2-3 tree == OKAY
+EXPLAIN ANALYZE SELECT * FROM my_table ORDER BY nome;
 
-EXPLAIN SELECT * FROM Usuario WHERE idade BETWEEN 18 AND 18;
+-- Consulta com index avançado GIN == OKAY
+EXPLAIN ANALYZE SELECT * FROM my_table WHERE nome LIKE '%Jo%';
 
-EXPLAIN SELECT * FROM Usuario WHERE endereco ILIKE '%South%' ;
+-- Consulta com index avançado GIST == OKAY
+EXPLAIN ANALYZE SELECT * FROM my_table WHERE descricao_tsv @@ plainto_tsquery('João');
 
-EXPLAIN SELECT * FROM Usuario WHERE email  ILIKE  '%example%' AND idade > 25;
+-- Consulta com index avançado SPGIST == OKAY
+EXPLAIN ANALYZE SELECT * FROM my_table WHERE texto LIKE 'Jo%';
+
+-- Consulta com index avançado BRIN == OKAY
+EXPLAIN ANALYZE SELECT * FROM my_table WHERE data BETWEEN '2024-01-01' AND '2024-12-31';
 
 -- Pegar a quantidade de linhas da tabela
-EXPLAIN SELECT COUNT(*) FROM usuario;
+EXPLAIN ANALYZE SELECT COUNT(*) FROM my_table;
