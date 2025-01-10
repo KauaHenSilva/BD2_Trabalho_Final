@@ -43,12 +43,9 @@ def criar_tabela():
             idade INT,
             salario FLOAT,
             ponto_fidelidade INT,
-            quantidade_compras INT
+            quantidade_compras INT,
+            descricao_tsv TSVECTOR
         )
-    """)
-    
-    cur.execute("""
-        ALTER TABLE my_table ADD COLUMN IF NOT EXISTS descricao_tsv tsvector;
     """)
     
     # Criando índices
@@ -80,8 +77,8 @@ def inserir_dados_pool(dados):
     try:
         cur = conn.cursor()
         cur.executemany("""
-            INSERT INTO Usuario (nome, email, endereco, genero, senha, idioma, numero_amigos, idade, salario, ponto_fidelidade, quantidade_compras)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO my_table (nome, email, endereco, genero, senha, idioma, numero_amigos, idade, salario, ponto_fidelidade, quantidade_compras, descricao_tsv)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, to_tsvector(%s))
         """, dados)
         conn.commit()
         cur.close()
@@ -96,7 +93,7 @@ def inserir_dados_pool(dados):
 
 def gerar_dados(qtd):
     """Gera dados usando Faker para inserção no banco."""
-    return [(fake.name(), fake.email(), fake.address(), fake.random_element(elements=('M', 'F')), fake.password(), fake.language_code(), fake.random_int(0, 100), fake.random_int(18, 80), fake.random_int(1_000, 10_000), fake.random_int(0, 100), fake.random_int(1, 100))
+    return [(fake.name(), fake.email(), fake.address(), fake.random_element(elements=('M', 'F')), fake.password(), fake.language_code(), fake.random_int(0, 100), fake.random_int(18, 80), fake.random_int(1_000, 10_000), fake.random_int(0, 100), fake.random_int(1, 100), fake.text())
              for _ in range(qtd)]
 
 # Função para gerenciar a geração e inserção dos dados em paralelo
@@ -124,7 +121,7 @@ if __name__ == "__main__":
     try:
         criar_tabela()
         print("Iniciando inserções em massa...")
-        # inserir_infinitamente()
+        inserir_infinitamente()
     except KeyboardInterrupt:
         print("\nInterrompido pelo usuário.")
     finally:
