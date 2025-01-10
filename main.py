@@ -31,7 +31,7 @@ def criar_tabela():
     conn = connection_pool.getconn()
     cur = conn.cursor()
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS Usuario (
+        CREATE TABLE IF NOT EXISTS my_table (
             id SERIAL PRIMARY KEY,
             nome VARCHAR(100),
             email VARCHAR(100),
@@ -49,17 +49,18 @@ def criar_tabela():
     
     # Criando índices
     cur.execute("""
-        -- Índice Hash para a coluna 'email', útil para buscas de igualdade
-        CREATE INDEX IF NOT EXISTS idx_usuario_email_hash ON Usuario USING HASH (email);
+        -- Índice Hash para a coluna 'nome'.
+        CREATE INDEX IF NOT EXISTS idx_tabela_hash ON my_table USING HASH(nome);
 
-        -- Índice B-tree para a coluna 'nome', caso seja utilizado em buscas frequentes
-        CREATE INDEX IF NOT EXISTS idx_usuario_nome ON Usuario (nome);
-
-        -- Índice B-tree para a coluna 'idade', para consultas por faixa etária
-        CREATE INDEX IF NOT EXISTS idx_usuario_idade ON Usuario (idade);
-
+        -- Índice B-tree para a coluna 'nome'.
+        CREATE INDEX IF NOT EXISTS idx_tabela_nome_b_tree ON my_table(nome);
+        
+        -- Índice GIST para a coluna 'nome'.
+        -- CREATE INDEX IF NOT EXISTS idx_tabela_nome_gist ON my_table(nome) USING GIST;
+        
         -- Índice GIN para o campo 'endereco' caso tenha buscas por partes do texto
-        CREATE INDEX IF NOT EXISTS idx_usuario_endereco ON Usuario USING GIN (endereco gin_trgm_ops);
+        CREATE EXTENSION IF NOT EXISTS pg_trgm;
+        CREATE INDEX IF NOT EXISTS idx_tabela_endereco ON my_table USING GIN (endereco gin_trgm_ops);
     """)
 
     conn.commit()
@@ -119,7 +120,7 @@ if __name__ == "__main__":
     try:
         criar_tabela()
         print("Iniciando inserções em massa...")
-        inserir_infinitamente()
+        # inserir_infinitamente()
     except KeyboardInterrupt:
         print("\nInterrompido pelo usuário.")
     finally:
