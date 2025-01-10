@@ -49,7 +49,7 @@ def criar_tabela():
             data DATE
         )
     """)
-    
+
     # Criando índices
     cur.execute("""
         -- Índice Hash para a coluna 'nome'.
@@ -87,7 +87,7 @@ def inserir_dados_pool(dados):
         cur.executemany("""
             INSERT INTO my_table (nome, email, endereco, genero, senha, idioma, numero_amigos, idade, salario, ponto_fidelidade, quantidade_compras,
             descricao_tsv, texto, data)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, to_tsvector(%s), %s, now())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, to_tsvector(%s), %s, %s)
         """, dados)
         conn.commit()
         cur.close()
@@ -102,8 +102,8 @@ def inserir_dados_pool(dados):
 
 def gerar_dados(qtd):
     """Gera dados usando Faker para inserção no banco."""
-    return [(fake.name(), fake.email(), fake.address(), fake.random_element(elements=('M', 'F')), fake.password(), fake.language_code(), fake.random_int(0, 100), fake.random_int(18, 80), fake.random_int(1_000, 10_000), fake.random_int(0, 100), fake.random_int(1, 100), fake.text())
-             for _ in range(qtd)]
+    return [(fake.name(), fake.email(), fake.address(), fake.random_element(elements=('M', 'F')), fake.password(), fake.language_code(), fake.random_int(0, 100), fake.random_int(18, 80), fake.random_int(1_000, 10_000), fake.random_int(0, 100), fake.random_int(1, 100), fake.text(), fake.text(), fake.date_time_between(start_date='-1y', end_date='now').strftime('%Y-%m-%d'))
+            for _ in range(qtd)]
 
 # Função para gerenciar a geração e inserção dos dados em paralelo
 
@@ -113,17 +113,19 @@ def inserir_infinitamente():
     with ThreadPoolExecutor(max_workers=num_threads_cpu) as executor_cpu, ThreadPoolExecutor(max_workers=num_threads_io) as executor_io:
         while True:
             # Gera os dados utilizando as threads CPU-bound
-            futuros_dados = [executor_cpu.submit(gerar_dados, qtd_por_thread) for _ in range(num_threads_io)]
+            futuros_dados = [executor_cpu.submit(
+                gerar_dados, qtd_por_thread) for _ in range(num_threads_io)]
             dados = [futuro.result() for futuro in futuros_dados]
 
             # Envia os dados para o banco usando as threads I/O-bound
-            futuros_insercao = [executor_io.submit(inserir_dados_pool, dados[i]) for i in range(num_threads_io)]
+            futuros_insercao = [executor_io.submit(
+                inserir_dados_pool, dados[i]) for i in range(num_threads_io)]
             for futuro in futuros_insercao:
                 try:
                     futuro.result()  # Espera a inserção ser concluída
                 except Exception as e:
                     print(f"Erro na inserção de dados: {e}")
-                    
+
 
 if __name__ == "__main__":
     try:
