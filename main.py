@@ -47,6 +47,10 @@ def criar_tabela():
         )
     """)
     
+    cur.execute("""
+        ALTER TABLE my_table ADD COLUMN IF NOT EXISTS descricao_tsv tsvector;
+    """)
+    
     # Criando índices
     cur.execute("""
         -- Índice Hash para a coluna 'nome'.
@@ -56,7 +60,7 @@ def criar_tabela():
         CREATE INDEX IF NOT EXISTS idx_tabela_nome_b_tree ON my_table(nome);
         
         -- Índice GIST para a coluna 'nome'.
-        -- CREATE INDEX IF NOT EXISTS idx_tabela_nome_gist ON my_table(nome) USING GIST;
+        CREATE INDEX IF NOT EXISTS idx_descricao_gist ON my_table USING GIST (descricao_tsv);
         
         -- Índice GIN para o campo 'endereco' caso tenha buscas por partes do texto
         CREATE EXTENSION IF NOT EXISTS pg_trgm;
