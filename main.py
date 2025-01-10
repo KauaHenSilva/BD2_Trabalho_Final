@@ -44,7 +44,9 @@ def criar_tabela():
             salario FLOAT,
             ponto_fidelidade INT,
             quantidade_compras INT,
-            descricao_tsv TSVECTOR
+            descricao_tsv TSVECTOR,
+            texto TEXT,
+            data DATE
         )
     """)
     
@@ -62,6 +64,12 @@ def criar_tabela():
         -- Índice GIN para o campo 'endereco' caso tenha buscas por partes do texto
         CREATE EXTENSION IF NOT EXISTS pg_trgm;
         CREATE INDEX IF NOT EXISTS idx_tabela_endereco ON my_table USING GIN (endereco gin_trgm_ops);
+        
+        -- Índice SPGIST para o campo 'texto' caso tenha buscas por partes do texto
+        CREATE INDEX IF NOT EXISTS idx_texto_spgist ON my_table USING SPGIST (texto);
+        
+        -- Índice SPGIST para o campo 'data' caso tenha buscas por partes do texto
+        CREATE INDEX idx_transacoes_data_brin ON my_table USING BRIN (data);
     """)
 
     conn.commit()
@@ -77,8 +85,9 @@ def inserir_dados_pool(dados):
     try:
         cur = conn.cursor()
         cur.executemany("""
-            INSERT INTO my_table (nome, email, endereco, genero, senha, idioma, numero_amigos, idade, salario, ponto_fidelidade, quantidade_compras, descricao_tsv)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, to_tsvector(%s))
+            INSERT INTO my_table (nome, email, endereco, genero, senha, idioma, numero_amigos, idade, salario, ponto_fidelidade, quantidade_compras,
+            descricao_tsv, texto, data)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, to_tsvector(%s), %s, now())
         """, dados)
         conn.commit()
         cur.close()
@@ -115,7 +124,6 @@ def inserir_infinitamente():
                 except Exception as e:
                     print(f"Erro na inserção de dados: {e}")
                     
-
 
 if __name__ == "__main__":
     try:
