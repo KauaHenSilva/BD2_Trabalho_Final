@@ -12,13 +12,14 @@ db_config = {
     'port': '5432'
 }
 
+
 fake = Faker()
 
 # Criação do pool de conexões para I/O-bound
 num_cores = os.cpu_count()  # Número de núcleos da CPU
 num_threads_cpu = num_cores  # Número de threads CPU-bound
 num_threads_io = num_cores * 2  # Número de threads I/O-bound
-qtd_por_thread = 1_000  # Quantidade de dados por thread
+qtd_por_thread = 1_00  # Quantidade de dados por thread
 
 # Criação do pool de conexões
 connection_pool = ThreadedConnectionPool(1, num_threads_io, **db_config)
@@ -34,16 +35,7 @@ def criar_tabela():
         CREATE TABLE IF NOT EXISTS my_table (
             id SERIAL PRIMARY KEY,
             nome VARCHAR(100),
-            email VARCHAR(100),
-            endereco VARCHAR(100),
-            genero CHAR(1),
-            senha VARCHAR(100),
-            idioma VARCHAR(100),
-            numero_amigos INT,
-            idade INT,
-            salario FLOAT,
-            ponto_fidelidade INT,
-            quantidade_compras INT,
+            idade INTEGER,
             descricao_tsv TSVECTOR,
             texto TEXT,
             data DATE
@@ -58,17 +50,17 @@ def criar_tabela():
         -- Índice B-tree para a coluna 'nome'.
         CREATE INDEX IF NOT EXISTS idx_tabela_nome_b_tree ON my_table(nome);
         
-        -- Índice GIST para a coluna 'nome'.
-        CREATE INDEX IF NOT EXISTS idx_descricao_gist ON my_table USING GIST (descricao_tsv);
-        
-        -- Índice GIN para o campo 'endereco' caso tenha buscas por partes do texto
+        -- Índice GIN para o campo 'nome' caso tenha buscas por partes do texto
         CREATE EXTENSION IF NOT EXISTS pg_trgm;
-        CREATE INDEX IF NOT EXISTS idx_tabela_endereco ON my_table USING GIN (endereco gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_tabela_nome ON my_table USING GIN (nome gin_trgm_ops);
+        
+        -- Índice GIST para a coluna 'descricao_tsv'.
+        CREATE INDEX IF NOT EXISTS idx_descricao_gist ON my_table USING GIST (descricao_tsv);
         
         -- Índice SPGIST para o campo 'texto' caso tenha buscas por partes do texto
         CREATE INDEX IF NOT EXISTS idx_texto_spgist ON my_table USING SPGIST (texto);
         
-        -- Índice SPGIST para o campo 'data' caso tenha buscas por partes do texto
+        -- Índice BRIN para o campo 'data' caso tenha buscas por partes do texto
         CREATE INDEX idx_transacoes_data_brin ON my_table USING BRIN (data);
     """)
 
@@ -85,9 +77,8 @@ def inserir_dados_pool(dados):
     try:
         cur = conn.cursor()
         cur.executemany("""
-            INSERT INTO my_table (nome, email, endereco, genero, senha, idioma, numero_amigos, idade, salario, ponto_fidelidade, quantidade_compras,
-            descricao_tsv, texto, data)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, to_tsvector(%s), %s, %s)
+            INSERT INTO my_table (nome, idade, descricao_tsv, texto, data)
+            VALUES (%s, %s, to_tsvector(%s), %s, %s)
         """, dados)
         conn.commit()
         cur.close()
@@ -98,16 +89,16 @@ def inserir_dados_pool(dados):
         connection_pool.putconn(conn)
 
 # Função para gerar dados com Faker (CPU-bound)
-
-
 def gerar_dados(qtd):
     """Gera dados usando Faker para inserção no banco."""
-    return [(fake.name(), fake.email(), fake.address(), fake.random_element(elements=('M', 'F')), fake.password(), fake.language_code(), fake.random_int(0, 100), fake.random_int(18, 80), fake.random_int(1_000, 10_000), fake.random_int(0, 100), fake.random_int(1, 100), fake.text(), fake.text(), fake.date_time_between(start_date='-1y', end_date='now').strftime('%Y-%m-%d'))
-            for _ in range(qtd)]
+    
+    elementos = []
+    for _ in range(qtd):
+        description = fake.text()
+        elementos.append((fake.name(), fake.random_int(0, 100), description, description, fake.date()))
+    return elementos
 
 # Função para gerenciar a geração e inserção dos dados em paralelo
-
-
 def inserir_infinitamente():
     """Insere dados infinitamente utilizando dois pools de threads."""
     with ThreadPoolExecutor(max_workers=num_threads_cpu) as executor_cpu, ThreadPoolExecutor(max_workers=num_threads_io) as executor_io:
