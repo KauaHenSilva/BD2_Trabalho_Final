@@ -4,3 +4,6 @@ run_bd:
 run_script:
 	sudo docker build -t script_bd_2 .
 	sudo docker run --network host script_bd_2
+
+run_test:
+	python3 test.py

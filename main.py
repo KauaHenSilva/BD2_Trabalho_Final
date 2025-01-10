@@ -61,7 +61,7 @@ def criar_tabela():
         CREATE INDEX IF NOT EXISTS idx_texto_spgist ON my_table USING SPGIST (texto);
         
         -- Índice BRIN para o campo 'data' caso tenha buscas por partes do texto
-        CREATE INDEX idx_transacoes_data_brin ON my_table USING BRIN (data);
+        CREATE  INDEX IF NOT EXISTS  idx_transacoes_data_brin ON my_table USING BRIN (data);
     """)
 
     conn.commit()
