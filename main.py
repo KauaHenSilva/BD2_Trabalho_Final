@@ -43,7 +43,9 @@ def criar_tabela():
             idade INT,
             salario FLOAT,
             ponto_fidelidade INT,
-            quantidade_compras INT
+            quantidade_compras INT,
+            safado TEXT,
+            data DATE
         )
     """)
     
@@ -65,6 +67,12 @@ def criar_tabela():
         -- Índice GIN para o campo 'endereco' caso tenha buscas por partes do texto
         CREATE EXTENSION IF NOT EXISTS pg_trgm;
         CREATE INDEX IF NOT EXISTS idx_tabela_endereco ON my_table USING GIN (endereco gin_trgm_ops);
+        
+        -- Índice SPGIST para o campo 'safado' caso tenha buscas por partes do texto
+        CREATE INDEX IF NOT EXISTS idx_safado_spgist ON my_table USING SPGIST (safado);
+        
+        -- Índice SPGIST para o campo 'data' caso tenha buscas por partes do texto
+        CREATE INDEX idx_transacoes_data_brin ON my_table USING BRIN (data);
     """)
 
     conn.commit()
@@ -118,7 +126,6 @@ def inserir_infinitamente():
                 except Exception as e:
                     print(f"Erro na inserção de dados: {e}")
                     
-
 
 if __name__ == "__main__":
     try:
