@@ -1,12 +1,10 @@
 -- Pegar o tamanho da tabela
 SELECT pg_size_pretty(pg_total_relation_size('my_table'));
+SET enable_seqscan = off;
 -- Consulta com index basico
 SET enable_seqscan = on;
 
-EXPLAIN ANALYZE SELECT * FROM my_table WHERE email = 'sarahesparza@example.com';
 
--- Consulta com index avançado hash == OKAY
-EXPLAIN ANALYZE SELECT * FROM my_table WHERE nome = 'João';
 
 -- Consulta com index avançado 2-3 tree == OKAY
 EXPLAIN ANALYZE SELECT * FROM my_table ORDER BY nome;
