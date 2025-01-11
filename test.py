@@ -24,14 +24,20 @@ db_config = {
 indices = [
     ("CREATE INDEX IF NOT EXISTS idx_tabela_hash ON my_table USING HASH(nome);", "HASH"),
     ("CREATE INDEX IF NOT EXISTS idx_tabela_nome_b_tree ON my_table(nome);", "B-Tree"),
-    ("CREATE INDEX IF NOT EXISTS idx_tabela_nome_gin ON my_table USING GIN (nome gin_trgm_ops);", "GIN")
+    ("CREATE INDEX IF NOT EXISTS idx_tabela_nome_gin ON my_table USING GIN (nome gin_trgm_ops);", "GIN"),
+    ("CREATE INDEX IF NOT EXISTS idx_transacoes_data_brin ON my_table USING BRIN (data);", "BRIN"),
+    ("CREATE INDEX IF NOT EXISTS idx_texto_spgist ON my_table USING SPGIST (texto);", "SPGIST"),
+    ("CREATE INDEX IF NOT EXISTS idx_descricao_gist ON my_table USING GIST (descricao_tsv);", "GIST"),
 ]
 
 # Consultas que serão testadas
 queries = [
     ("EXPLAIN ANALYZE SELECT * FROM my_table WHERE nome = 'João';", "igual"),
     ("EXPLAIN ANALYZE SELECT * FROM my_table WHERE nome < 'João';", "menor"),
-    ("EXPLAIN ANALYZE SELECT * FROM my_table WHERE nome > 'João';", "maior")
+    ("EXPLAIN ANALYZE SELECT * FROM my_table WHERE nome > 'João';", "maior"),
+    ("EXPLAIN ANALYZE SELECT * FROM my_table WHERE data BETWEEN '2024-01-01' AND '2024-12-31';","intervalo"),
+    ("EXPLAIN ANALYZE SELECT * FROM my_table WHERE texto LIKE 'Jo%';", "comeca_com"),
+    ("EXPLAIN ANALYZE SELECT * FROM my_table WHERE descricao_tsv @@ plainto_tsquery('João');", "texto_como"),
 ]
 
 def connect_to_db(config):
@@ -67,6 +73,10 @@ def remove_todos_index(cursor, table_name):
     except psycopg2.Error as e:
         print(f"{Colors.FAIL}Erro ao remover índices: {e}{Colors.ENDC}")
 
+def set_optimizer_settings(cursor, enable_seqscan, enable_indexscan):
+    execute_query(cursor, f"SET enable_seqscan = {'on' if enable_seqscan else 'off'};")
+    execute_query(cursor, f"SET enable_indexscan = {'on' if enable_indexscan else 'off'};")
+
 def execute_test(cursor, query):
     return execute_query(cursor, query)
 
@@ -76,16 +86,37 @@ def display_results(title, results):
         print(f"{Colors.OKGREEN}{row[0]}{Colors.ENDC}")
 
 def test_by_index_type(cursor, indices, queries, table_name):
+    set_optimizer_settings(cursor, enable_seqscan=False, enable_indexscan=True)
     for index_query, index_type in indices:
         print(f"{Colors.BOLD}\n{'=' * 50}\nTestando índices do tipo: {index_type}{Colors.ENDC}")
         cursor.execute(index_query)
         cursor.connection.commit()
 
         for query, condition in queries:
-            if index_type == "HASH" and condition in ["menor", "maior"]:
+            if index_type == "HASH" and condition in ["menor", "maior","intervalo", "comeca_com", "texto_como"]:
                 print(f"{Colors.WARNING}Índice {index_type} ignorado para condição '{condition}'.{Colors.ENDC}")
                 continue
-
+            
+            if index_type == "B-Tree" and condition in ["comeca_com", "texto_como", "intervalo"]:
+                print(f"{Colors.WARNING}Índice {index_type} ignorado para condição '{condition}'.{Colors.ENDC}")
+                continue
+            
+            if index_type == "GIN" and condition in ["menor", "maior", "intervalo", "comeca_com", "texto_como"]:
+                print(f"{Colors.WARNING}Índice {index_type} ignorado para condição '{condition}'.{Colors.ENDC}")
+                continue
+            
+            if index_type == "BRIN" and condition in ["igual", "menor", "maior", "comeca_com", "texto_como"]:
+                print(f"{Colors.WARNING}Índice {index_type} ignorado para condição '{condition}'.{Colors.ENDC}")
+                continue
+            
+            if index_type == "SPGIST" and condition in ["igual", "menor", "maior", "intervalo", "texto_como"]:
+                print(f"{Colors.WARNING}Índice {index_type} ignorado para condição '{condition}'.{Colors.ENDC}")
+                continue
+            
+            if index_type == "GIST" and condition in ["igual", "menor", "maior", "intervalo", "comeca_com"]:
+                print(f"{Colors.WARNING}Índice {index_type} ignorado para condição '{condition}'.{Colors.ENDC}")
+                continue
+            
             print(f"{Colors.OKBLUE}\nExecutando consulta: {query}{Colors.ENDC}")
             results = execute_test(cursor, query)
             display_results(f"Resultados para índice {index_type} ({condition}):", results)
@@ -93,10 +124,12 @@ def test_by_index_type(cursor, indices, queries, table_name):
         # Remove índices após teste
         remove_todos_index(cursor, table_name)
 
+    set_optimizer_settings(cursor, enable_seqscan=True, enable_indexscan=True)
 
 def test_without_indices(cursor, queries, table_name):
     print(f"{Colors.BOLD}\n{'=' * 50}\nTestando consultas sem índices...{Colors.ENDC}")
     remove_todos_index(cursor, table_name)
+    set_optimizer_settings(cursor, enable_seqscan=True, enable_indexscan=False)
 
     for query, condition in queries:
         print(f"{Colors.OKBLUE}\nExecutando consulta: {query}{Colors.ENDC}")
