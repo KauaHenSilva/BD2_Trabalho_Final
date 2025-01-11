@@ -1,7 +1,7 @@
 -- Pegar o tamanho da tabela
-SELECT pg_size_pretty(pg_total_relation_size('usuario'));
-SET enable_seqscan = off;
+SELECT pg_size_pretty(pg_total_relation_size('my_table'));
 -- Consulta com index basico
+SET enable_seqscan = on;
 
 EXPLAIN ANALYZE SELECT * FROM my_table WHERE email = 'sarahesparza@example.com';
 
@@ -12,6 +12,8 @@ EXPLAIN ANALYZE SELECT * FROM my_table WHERE nome = 'João';
 EXPLAIN ANALYZE SELECT * FROM my_table ORDER BY nome;
 
 -- Consulta com index avançado GIN == OKAY
+
+SET enable_seqscan = off;
 EXPLAIN ANALYZE SELECT * FROM my_table WHERE nome LIKE '%Jo%';
 
 -- Consulta com index avançado GIST == OKAY
@@ -21,6 +23,7 @@ EXPLAIN ANALYZE SELECT * FROM my_table WHERE descricao_tsv @@ plainto_tsquery('J
 EXPLAIN ANALYZE SELECT * FROM my_table WHERE texto LIKE 'Jo%';
 
 -- Consulta com index avançado BRIN == OKAY
+SET enable_seqscan = off;
 EXPLAIN ANALYZE SELECT * FROM my_table WHERE data BETWEEN '2024-01-01' AND '2024-12-31';
 
 -- Pegar a quantidade de linhas da tabela
