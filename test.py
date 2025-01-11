@@ -67,10 +67,6 @@ def remove_todos_index(cursor, table_name):
     except psycopg2.Error as e:
         print(f"{Colors.FAIL}Erro ao remover índices: {e}{Colors.ENDC}")
 
-def set_optimizer_settings(cursor, enable_seqscan, enable_indexscan):
-    execute_query(cursor, f"SET enable_seqscan = {'on' if enable_seqscan else 'off'};")
-    execute_query(cursor, f"SET enable_indexscan = {'on' if enable_indexscan else 'off'};")
-
 def execute_test(cursor, query):
     return execute_query(cursor, query)
 
@@ -80,7 +76,6 @@ def display_results(title, results):
         print(f"{Colors.OKGREEN}{row[0]}{Colors.ENDC}")
 
 def test_by_index_type(cursor, indices, queries, table_name):
-    set_optimizer_settings(cursor, enable_seqscan=False, enable_indexscan=True)
     for index_query, index_type in indices:
         print(f"{Colors.BOLD}\n{'=' * 50}\nTestando índices do tipo: {index_type}{Colors.ENDC}")
         cursor.execute(index_query)
@@ -98,12 +93,10 @@ def test_by_index_type(cursor, indices, queries, table_name):
         # Remove índices após teste
         remove_todos_index(cursor, table_name)
 
-    set_optimizer_settings(cursor, enable_seqscan=True, enable_indexscan=True)
 
 def test_without_indices(cursor, queries, table_name):
     print(f"{Colors.BOLD}\n{'=' * 50}\nTestando consultas sem índices...{Colors.ENDC}")
     remove_todos_index(cursor, table_name)
-    set_optimizer_settings(cursor, enable_seqscan=True, enable_indexscan=False)
 
     for query, condition in queries:
         print(f"{Colors.OKBLUE}\nExecutando consulta: {query}{Colors.ENDC}")
